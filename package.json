@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/mixr_types",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "TypeScript types for MIXR API - Cocktail recipe platform",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
     "lint:fix": "bunx eslint src/ --fix",
     "format": "bunx prettier --write \"src/**/*.ts\"",
     "format:check": "bunx prettier --check \"src/**/*.ts\"",
-    "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "verify": "bun run typecheck && bun run lint && bun run build",
     "prepublishOnly": "bun run clean && bun run verify"
