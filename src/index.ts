@@ -24,21 +24,13 @@ import type { Optional } from '@sudobility/types';
  * Equipment subcategory types
  */
 export type EquipmentSubcategory =
-  | 'essential'
-  | 'glassware'
-  | 'garnish'
-  | 'advanced';
+  'essential' | 'glassware' | 'garnish' | 'advanced';
 
 /**
  * Ingredient subcategory types
  */
 export type IngredientSubcategory =
-  | 'spirit'
-  | 'wine'
-  | 'other_alcohol'
-  | 'fruit'
-  | 'spice'
-  | 'other';
+  'spirit' | 'wine' | 'other_alcohol' | 'fruit' | 'spice' | 'other';
 
 /**
  * List of equipment subcategories
