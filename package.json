@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/mixr_types",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "TypeScript types for MIXR API - Cocktail recipe platform",
   "type": "module",
   "main": "./dist/index.js",
