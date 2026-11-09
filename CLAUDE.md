@@ -1,132 +1,86 @@
 # MIXR Types
 
-> **Git policy — never auto-commit or auto-push.** Leave your work in the working tree.
-> Run `git commit`, `git push`, `gh pr create`, or `scripts/push_all.sh` **only when the user
-> explicitly asks in that turn**. Approval for an earlier change does not carry forward, and
-> finishing a task is not permission to commit it.
+> **Git policy — never auto-commit or auto-push.** Leave work in the working tree.
+> Run `git commit`, `git push`, `gh pr create`, or `scripts/push_all.sh` **only when
+> the user explicitly asks in that turn**. Approval for an earlier change does not
+> carry forward, and finishing a task is not permission to commit it.
 
-TypeScript type definitions for MIXR API - Cocktail recipe platform.
+TypeScript type definitions for the MIXR cocktail-recipe platform. **Types-only
+package**: `src/index.ts` holds every declaration plus two array constants and one
+type guard (`isSuccessResponse`). No runtime business logic, no React, no app code.
 
-**npm**: `@sudobility/mixr_types` (public)
+- **npm name**: `@sudobility/mixr_types` — published to **GitHub Packages** (not public npm)
+- **License**: BUSL-1.1
 
-## Tech Stack
+## Stack
 
-- **Language**: TypeScript
-- **Runtime**: Bun
-- **Package Manager**: Bun (do not use npm/yarn/pnpm for installing dependencies)
-- **Build**: TypeScript compiler (dual ESM/CJS)
-- **Test**: Vitest
+- TypeScript (`~5.9`), ESM only (`"type": "module"` — no CommonJS build)
+- Bun runtime + package manager (do not use npm/yarn/pnpm to install)
+- Build: `tsc` via `tsconfig.esm.json`
+- Test: Vitest
+- Lint: ESLint flat config + Prettier
 
-## Project Structure
-
-```
-src/
-├── index.ts          # All type definitions and constants
-└── __tests__/
-    └── index.test.ts # Type validation tests
-dist/
-├── index.js          # ESM build
-├── index.cjs         # CommonJS build
-└── index.d.ts        # Type declarations
-```
-
-## Commands
+## Commands (all verified)
 
 ```bash
-bun run build        # Build ESM + CJS
-bun run build:esm    # Build ESM only
-bun run build:cjs    # Build CJS only
-bun run clean        # Remove dist/
-bun run test         # Run Vitest
-bun run typecheck    # TypeScript check
-bun run lint         # Run ESLint
-bun run format       # Format with Prettier
-bun run verify       # Typecheck + lint + build
+bun install        # requires GitHub Packages auth (see Registry below)
+bun run build      # tsc -p tsconfig.esm.json -> dist/ (ESM only)
+bun run typecheck  # tsc --noEmit
+bun run lint       # eslint src/   (lint:fix to autofix)
+bun run format     # prettier --write (format:check to verify)
+bun run test:unit  # vitest run   (test:watch for watch mode)
+bun run verify     # typecheck + lint + build
+bun run clean      # rm -rf dist dist-cjs
 ```
 
-## Type Categories
+There is **no `bun run test`** and **no `build:esm`/`build:cjs`** scripts — use the
+names above. The test script is `test:unit`.
 
-### Subcategory Enums & Constants
-- `EquipmentSubcategory`: 'essential' | 'glassware' | 'garnish' | 'advanced'
-- `IngredientSubcategory`: 'spirit' | 'wine' | 'other_alcohol' | 'fruit' | 'spice' | 'other'
-- `EQUIPMENT_SUBCATEGORIES` / `INGREDIENT_SUBCATEGORIES` - Array constants
+## Gotchas
 
-### Entity Types (Database Models)
-- `Equipment` - id, subcategory, name, icon, createdAt
-- `Ingredient` - id, subcategory, name, icon, createdAt
-- `Mood` - id, emoji, name, description, exampleDrinks, imageName, createdAt
-- `User` - id, email, display_name, created_at, updated_at
-- `UserPreferences` - equipment_ids[], ingredient_ids[], updated_at
-- `Recipe` - id, name, description, moodId, createdAt, mood, ingredients[], steps[], equipment[]
-- `RecipeRating` - id, recipe_id, user_id, stars, review, timestamps
-- `RatingAggregate` - recipe_id, average_rating, total_ratings, rating_distribution
+- **ESM only.** Despite older docs, there is no dual ESM/CJS build. `bun run build`
+  emits only `dist/index.js` + `dist/index.d.ts` (+ maps). `package.json` `main`,
+  `types`, and `exports` all point at the ESM files; there is no `dist/index.cjs`.
+- **Registry**: `.npmrc` scopes `@sudobility` to `https://npm.pkg.github.com`.
+  Installing (including the `@sudobility/types` peer dep) needs a token with
+  `read:packages` (`GH_PACKAGES_READ_TOKEN`). Install fails without it.
+- **Peer dependency**: `@sudobility/types ^1.9.78`. `src/index.ts` re-exports
+  `Optional`, `ApiResponse`, `PaginatedResponse`, etc. from it, so types here depend
+  on that package being present in the consumer.
+- **snake_case vs camelCase is intentional.** API-facing shapes (`User`,
+  `UserPreferences`, `RecipeRating`, request bodies) use snake_case to match the
+  wire format; entity fields like `createdAt`/`moodId` use camelCase. Match the
+  existing field style of the surrounding type — don't "normalize" it.
+- **Nullable fields** use `Optional<T>` (from `@sudobility/types`), not `T | null`
+  spelled out. Follow that convention.
+- `eslint.config.js` is the active flat config; `eslint.config.mjs` also exists and
+  is effectively unused.
 
-### Request Types
-- `GenerateRecipeRequest` - equipment_ids[], ingredient_ids[], mood_id
-- `UpdateUserRequest` - display_name
-- `UpdateUserPreferencesRequest` - equipment_ids[], ingredient_ids[]
-- `SubmitRatingRequest` - stars, review?
-- `AddFavoriteRequest` - recipe_id
+## Architecture
 
-### Response Types
-- `MixrApiResponse<T>` - Standard wrapper with success, data, error, count
-- Entity-specific: `EquipmentListResponse`, `RecipeResponse`, etc.
+Single source file, grouped by section comments: enum/union types + constants →
+`MixrApiResponse<T>` + `isSuccessResponse` guard → entity types → request bodies →
+query params → response-type aliases → subscription/health/version types. Response
+aliases are thin wrappers (`type X = MixrApiResponse<Y>`); a few responses define
+bespoke shapes (`AddFavoriteResponse`, `HealthResponse`, `VersionResponse`,
+`SubscriptionStatusResponse`) — see `plans/IMPROVEMENTS.md` for the standing note to
+consolidate these onto `MixrApiResponse<T>`.
 
-### Query Parameter Types
-- `EquipmentQueryParams` - subcategory filter
-- `IngredientQueryParams` - subcategory filter
-- `PaginationParams` - limit, offset
-- `RatingListParams` - sort options
-
-## Usage
-
-```typescript
-import type {
-  Equipment, Ingredient, Mood, Recipe, User,
-  GenerateRecipeRequest, MixrApiResponse,
-} from '@sudobility/mixr_types';
-
-import { EQUIPMENT_SUBCATEGORIES, INGREDIENT_SUBCATEGORIES } from '@sudobility/mixr_types';
-```
-
-## Peer Dependencies
-
-- `@sudobility/types` - Common Sudobility types
-
-## Dual Build
-
-Supports both ESM and CommonJS:
-
-```json
-{
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts"
-}
-```
-
-## Package Hierarchy
-
-This is the base types package used by all other MIXR packages:
-
-```
-mixr_types (this package)
-    ^
-mixr_client (API hooks)
-    ^
-mixr_lib (business logic)
-    ^
-mixr (frontend)
-mixr_api (backend)
-```
+Tests (`src/__tests__/index.test.ts`) are compile-time shape checks plus runtime
+assertions on the constants and `isSuccessResponse`.
 
 ## Publishing
 
-```bash
-bun run verify          # All checks
-npm publish             # Publish to npm (public)
-```
+CI (`.github/workflows/ci-cd.yml`) calls the shared `johnqh/workflows` unified
+pipeline with `publish-target: github` on pushes to `main`/`develop`.
+`prepublishOnly` runs `clean` + `verify`. Release by bumping `version` in
+`package.json`.
 
-## Git Workflow
+## Package hierarchy
 
-- Do not use feature branches for code changes. Always stay on the current branch.
+Base types package consumed by `@sudobility/mixr_client` (hooks) and
+`@sudobility/mixr_lib` (logic), then `mixr` (frontend) and `mixr_api` (backend).
+
+## Git workflow
+
+Do not use feature branches for code changes; stay on the current branch.
