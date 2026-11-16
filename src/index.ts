@@ -5,8 +5,11 @@
 
 // Re-export common types from @sudobility/types
 export type {
+  ApiInfoResponse,
   ApiResponse,
   BaseResponse,
+  HealthCheckData,
+  HealthResponse,
   NetworkClient,
   Optional,
   PaginatedResponse,
@@ -14,7 +17,15 @@ export type {
   PaginationOptions,
 } from '@sudobility/types';
 
-import type { Optional } from '@sudobility/types';
+// Re-export canonical response constructors and guards from @sudobility/types
+export {
+  errorResponse,
+  isErrorResponse,
+  isSuccessResponse,
+  successResponse,
+} from '@sudobility/types';
+
+import type { BaseResponse, Optional } from '@sudobility/types';
 
 // =============================================================================
 // Enum Types
@@ -55,37 +66,21 @@ export const INGREDIENT_SUBCATEGORIES: IngredientSubcategory[] = [
 ];
 
 // =============================================================================
-// API Response wrapper (matches existing MixrApiResponse)
+// API Response wrapper (canonical BaseResponse alias)
 // =============================================================================
 
 /**
- * API Response wrapper
- */
-export interface MixrApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  count?: number;
-}
-
-/**
- * Type guard that narrows a {@link MixrApiResponse} to a successful response
- * where `success` is `true` and `data` is guaranteed to be present.
+ * API Response wrapper.
  *
- * @example
- * ```ts
- * const res: MixrApiResponse<Recipe[]> = await fetchRecipes();
- * if (isSuccessResponse(res)) {
- *   // res.data is Recipe[] (not undefined)
- *   console.log(res.data.length);
- * }
- * ```
+ * Alias for the canonical {@link BaseResponse} envelope from `@sudobility/types`
+ * (`{ success, data?, error?, timestamp }`). The former bespoke `count` field is
+ * intentionally dropped. The name is kept as an alias so the many
+ * `XListResponse = MixrApiResponse<Y[]>` aliases below keep working.
+ *
+ * The `isSuccessResponse` / `isErrorResponse` guards and the `successResponse` /
+ * `errorResponse` constructors are re-exported from `@sudobility/types` above.
  */
-export function isSuccessResponse<T>(
-  res: MixrApiResponse<T>
-): res is MixrApiResponse<T> & { success: true; data: T } {
-  return res.success === true && res.data !== undefined;
-}
+export type MixrApiResponse<T = unknown> = BaseResponse<T>;
 
 // =============================================================================
 // Entity Types (database models)
@@ -386,16 +381,12 @@ export type RecipeResponse = MixrApiResponse<Recipe>;
 export type UserResponse = MixrApiResponse<User>;
 export type UserPreferencesResponse = MixrApiResponse<UserPreferences>;
 
-// Favorites responses
-export interface AddFavoriteResponse {
-  success: boolean;
+// Favorites responses — shared envelope carrying a short ack message.
+export interface FavoriteMutationData {
   message: string;
 }
-
-export interface RemoveFavoriteResponse {
-  success: boolean;
-  message: string;
-}
+export type AddFavoriteResponse = MixrApiResponse<FavoriteMutationData>;
+export type RemoveFavoriteResponse = MixrApiResponse<FavoriteMutationData>;
 
 // Rating responses
 export type RecipeRatingResponse = MixrApiResponse<RecipeRating>;
@@ -422,14 +413,12 @@ export interface SubscriptionStatusData {
 }
 
 /**
- * Response from GET /api/v1/users/:userId/subscriptions
+ * Response from GET /api/v1/users/:userId/subscriptions.
+ *
+ * Canonical envelope wrapping {@link SubscriptionStatusData}.
  */
-export interface SubscriptionStatusResponse {
-  success: boolean;
-  data?: SubscriptionStatusData;
-  error?: string;
-  timestamp: string;
-}
+export type SubscriptionStatusResponse =
+  MixrApiResponse<SubscriptionStatusData>;
 
 // =============================================================================
 // Not found / error response type
@@ -444,14 +433,8 @@ export type MixrErrorResponse = MixrApiResponse<never>;
 // Health check types
 // =============================================================================
 
-export interface HealthResponse {
-  success: boolean;
-  status: string;
-  timestamp: string;
-}
-
-export interface VersionResponse {
-  success: boolean;
-  message: string;
-  version: string;
-}
+// `HealthResponse` (and its alias `HealthCheckData`) are re-exported from
+// `@sudobility/types` at the top of this file: `{ status, version }`, used as the
+// payload of `successResponse(...)` for the `/health` endpoint. The service-info
+// endpoint (`GET /`) uses the canonical `ApiInfoResponse` (`{ name, version, status }`).
+// The former bespoke `HealthResponse`/`VersionResponse` envelopes have been removed.

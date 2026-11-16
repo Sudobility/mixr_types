@@ -27,7 +27,6 @@ import {
   type RecipeResponse,
   type UserResponse,
   type HealthResponse,
-  type VersionResponse,
 } from '../index';
 
 describe('Constants', () => {
@@ -370,7 +369,7 @@ describe('API Response Types', () => {
       const response: MixrApiResponse<string[]> = {
         success: true,
         data: ['item1', 'item2'],
-        count: 2,
+        timestamp: '2024-01-01T00:00:00Z',
       };
 
       expect(response.success).toBe(true);
@@ -405,23 +404,14 @@ describe('API Response Types', () => {
       expect(response.error).toBeUndefined();
     });
 
-    it('should allow count field to be undefined', () => {
+    it('should carry a timestamp on the canonical envelope', () => {
       const response: MixrApiResponse<string> = {
         success: true,
         data: 'hello',
+        timestamp: '2024-01-01T00:00:00Z',
       };
 
-      expect(response.count).toBeUndefined();
-    });
-
-    it('should accept count field when provided', () => {
-      const response: MixrApiResponse<number[]> = {
-        success: true,
-        data: [1, 2, 3],
-        count: 3,
-      };
-
-      expect(response.count).toBe(3);
+      expect(response.timestamp).toBe('2024-01-01T00:00:00Z');
     });
 
     it('should default generic type to unknown', () => {
@@ -448,7 +438,6 @@ describe('API Response Types', () => {
             createdAt: '2024-01-01T00:00:00Z',
           },
         ],
-        count: 1,
       };
 
       expect(response.success).toBe(true);
@@ -505,26 +494,13 @@ describe('API Response Types', () => {
   });
 
   describe('HealthResponse', () => {
-    it('should accept valid health response', () => {
+    it('should accept the canonical health payload ({ status, version })', () => {
       const response: HealthResponse = {
-        success: true,
         status: 'healthy',
-        timestamp: '2024-01-01T00:00:00Z',
-      };
-
-      expect(response.success).toBe(true);
-      expect(response.status).toBe('healthy');
-    });
-  });
-
-  describe('VersionResponse', () => {
-    it('should accept valid version response', () => {
-      const response: VersionResponse = {
-        success: true,
-        message: 'API is running',
         version: '1.0.0',
       };
 
+      expect(response.status).toBe('healthy');
       expect(response.version).toBe('1.0.0');
     });
   });
@@ -601,7 +577,7 @@ describe('isSuccessResponse type guard', () => {
     const response: MixrApiResponse<string[]> = {
       success: true,
       data: ['item1', 'item2'],
-      count: 2,
+      timestamp: '2024-01-01T00:00:00Z',
     };
 
     expect(isSuccessResponse(response)).toBe(true);
@@ -616,12 +592,18 @@ describe('isSuccessResponse type guard', () => {
     expect(isSuccessResponse(response)).toBe(false);
   });
 
-  it('should return false when success is true but data is undefined', () => {
+  it('should return true when success is true even if data is undefined (canonical guard does not require data)', () => {
     const response: MixrApiResponse<string> = {
       success: true,
     };
 
-    expect(isSuccessResponse(response)).toBe(false);
+    expect(isSuccessResponse(response)).toBe(true);
+  });
+
+  it('should return false for a non-object value', () => {
+    expect(isSuccessResponse(null)).toBe(false);
+    expect(isSuccessResponse(undefined)).toBe(false);
+    expect(isSuccessResponse('nope')).toBe(false);
   });
 
   it('should return false when success is false even if data is present', () => {
